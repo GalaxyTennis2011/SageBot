@@ -1,4 +1,4 @@
-const OPENROUTER_API_KEY = "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"; // Replace with your key
+const OPENROUTER_API_KEY = "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"; // Replace with your key
 const SITE_URL = "https://hunbot.com";
 const SITE_NAME = "CHATGPT CLONE";
 
