@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AskRaider</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Sidebar for chat history -->
+<div class="sidebar">
+<button id="new-chat">New Chat</button>
+<div id="chat-history"></div>
+</div>
+
+<!-- Toggle button (outside sidebar) -->
+<button class="sidebar-toggle">☰</button>
+
+<!-- Main chat interface -->
+<div class="main">
+<div id="chat-window"></div>
+
+<!-- Message input form -->
+<form id="chat-form">
+<input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" required />
+<button type="submit">Send</button>
+</form>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
