@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }));
 
     const payload = {
-      model: "openai/gpt-3.5-turbo",
+      model: "openai/gpt-4.1-Nano",
       messages: [
         { role: "system", content: tutorPrompt },
         ...messageHistory
