@@ -1,33 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AskRaider</title>
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AskRaider</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
 </head>
 <body>
 
-<!-- Sidebar for chat history -->
-<div class="sidebar">
-<button id="new-chat">New Chat</button>
-<div id="chat-history"></div>
-</div>
+  <!-- Sidebar for chat history -->
 
-<!-- Toggle button (outside sidebar) -->
-<button class="sidebar-toggle">☰</button>
+    <div id="struggle-tracker" style="margin-top: 20px; padding: 10px; background-color: #333; border-radius: 8px; font-size: 12px;">
+      <h4 style="margin: 0 0 8px 0; color: #0078d4;">📊 Learning Progress</h4>
+      <div id="struggle-list"></div>
+    </div>
 
-<!-- Main chat interface -->
-<div class="main">
-<div id="chat-window"></div>
+  <div class="sidebar">
+    <button id="new-chat">New Chat</button>
+    <div id="chat-history"></div>
+  </div>
 
-<!-- Message input form -->
-<form id="chat-form">
-<input type="text" id="user-input" placeholder="Type your message..." autocomplete="off" required />
-<button type="submit">Send</button>
-</form>
-</div>
+  <!-- Toggle button (outside sidebar) -->
+  <button class="sidebar-toggle">☰</button>
 
-<script src="script.js"></script>
+  <!-- Main chat interface -->
+  <div class="main">
+    <div id="chat-window"></div>
+
+    <!-- Message input form -->
+    <form id="chat-form" enctype="multipart/form-data">
+      <div class="input-container">
+        <input type="text" id="user-input" placeholder="Type your message or upload an assignment..." autocomplete="off" />
+        <label for="file-input" class="file-upload-btn" title="Upload assignment">📎</label>
+        <input type="file" id="file-input" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png" style="display: none;" />
+        <button type="submit">Send</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
