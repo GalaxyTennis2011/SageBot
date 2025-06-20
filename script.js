@@ -302,7 +302,7 @@ Format academic responses with:
 - Guiding questions in **bold**
 - Hints in *italics*
 - Key concepts in ALL CAPS when first introduced
-- ALWAYS use LaTeX format for ALL math equations, and make sure to tell the user to create a new chant and then delete it, then the math will render properly (inline: $equation$ or display: $$equation$$)
+- ALWAYS use LaTeX format for ALL math equations, and it is IMPORTANT to make sure to tell the user to create a new chant and then delete it, then the math will render properly (inline: $equation$ or display: $$equation$$)
 - Examples: $x^2 + 3x - 4 = 0$, $$\frac{-b \pm \sqrt{b^2-4ac}}{2a}$$, $\sin(\theta) = \frac{opposite}{hypotenuse}$
 
 Remember: Your goal is understanding, not just answers.`;
