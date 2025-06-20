@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Sidebar toggle handler
   sidebarToggle.addEventListener("click", () => {
     const struggleTracker = document.getElementById("struggle-tracker");
+    const overlay = document.querySelector(".sidebar-overlay");
     
     sidebar.classList.toggle("hidden");
     sidebarToggle.classList.toggle("collapsed");
@@ -39,6 +40,13 @@ document.addEventListener("DOMContentLoaded", () => {
       struggleTracker.classList.toggle("hidden");
     }
 
+    // Handle mobile overlay
+    if (window.innerWidth <= 768) {
+      if (overlay) {
+        overlay.classList.toggle("active");
+      }
+    }
+
     // Update main area margin when sidebar is toggled
     if (sidebar.classList.contains("hidden")) {
       mainArea.style.marginLeft = "0";
@@ -46,6 +54,20 @@ document.addEventListener("DOMContentLoaded", () => {
       mainArea.style.marginLeft = "0px";
     }
   });
+
+  // Close sidebar when clicking overlay (mobile)
+  const overlay = document.querySelector(".sidebar-overlay");
+  if (overlay) {
+    overlay.addEventListener("click", () => {
+      sidebar.classList.add("hidden");
+      sidebarToggle.classList.add("collapsed");
+      overlay.classList.remove("active");
+      const struggleTracker = document.getElementById("struggle-tracker");
+      if (struggleTracker) {
+        struggleTracker.classList.add("hidden");
+      }
+    });
+  }
 
   function startNewChat() {
     const name = prompt("Name this chat:");
