@@ -569,8 +569,6 @@ Would you like me to generate some practice questions to get started?`,
 async function sendMessageToAI(userMessage) {
   const tutorPrompt = `You are an expert tutor specializing in personalized learning.
 
-For simple greetings from the user (hello, hi, hey), respond briefly and naturally like: "Hello! How are you doing today? What subject can I help you with?"
-
 For academic questions, use this approach:
 1. Break down concepts into clear, simple steps (use numbered lists)
 2. Guide with questions rather than giving direct answers
