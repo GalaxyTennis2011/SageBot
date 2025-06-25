@@ -414,6 +414,75 @@ function updateChatHistory() {
   });
 }
 
+// Function to copy text to clipboard
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (err) {
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.opacity = '0';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      return true;
+    } catch (fallbackErr) {
+      document.body.removeChild(textArea);
+      return false;
+    }
+  }
+}
+
+// Function to strip HTML tags and get plain text
+function stripHtmlTags(html) {
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  return temp.textContent || temp.innerText || '';
+}
+
+// Function to add copy button to bot messages
+function addCopyButton(messageElement, messageText) {
+  const copyButton = document.createElement('button');
+  copyButton.className = 'copy-button';
+  copyButton.innerHTML = '📋 Copy';
+  copyButton.title = 'Copy message';
+
+  copyButton.addEventListener('click', async (e) => {
+    e.stopPropagation();
+
+    // Get the plain text version of the message
+    const plainText = stripHtmlTags(messageText);
+
+    // Copy to clipboard
+    const success = await copyToClipboard(plainText);
+
+    if (success) {
+      // Show success feedback
+      copyButton.innerHTML = '✅ Copied!';
+      copyButton.classList.add('copied');
+
+      // Reset button after 2 seconds
+      setTimeout(() => {
+        copyButton.innerHTML = '📋 Copy';
+        copyButton.classList.remove('copied');
+      }, 2000);
+    } else {
+      // Show error feedback
+      copyButton.innerHTML = '❌ Failed';
+      setTimeout(() => {
+        copyButton.innerHTML = '📋 Copy';
+      }, 2000);
+    }
+  });
+
+  messageElement.appendChild(copyButton);
+}
+
 // Render messages in chat window
 function renderChat() {
   chatWindow.innerHTML = "";
@@ -428,9 +497,13 @@ function renderChat() {
     msgEl.className = `chat-message ${msg.role}`;
 
     if (msg.isTyping) {
-      msgEl.innerHTML = `<span>Tutor is thinking</span><span class="typing-animation">...</span>`;
+      msgEl.innerHTML = `<span>Tutor is thinking</span><span class="typing-animation"></span>`;
     } else if (msg.role === "bot") {
-      msgEl.innerHTML = formatBotMessage(msg.text);
+      const formattedText = formatBotMessage(msg.text);
+      msgEl.innerHTML = formattedText;
+
+      // Add copy button to bot messages
+      addCopyButton(msgEl, formattedText);
     } else {
       msgEl.textContent = msg.text;
     }
@@ -473,7 +546,14 @@ function typeMessage(text, element, speed = 20) {
 
   function typeNext() {
     if (i < text.length) {
-      element.innerHTML = formatBotMessage(text.substring(0, i + 1));
+      const formattedText = formatBotMessage(text.substring(0, i + 1));
+      element.innerHTML = formattedText;
+
+      // Add copy button when typing is complete
+      if (i === text.length - 1) {
+        addCopyButton(element, formattedText);
+      }
+
       i++;
       chatWindow.scrollTop = chatWindow.scrollHeight;
       setTimeout(typeNext, speed);
@@ -569,6 +649,8 @@ Would you like me to generate some practice questions to get started?`,
 async function sendMessageToAI(userMessage) {
   const tutorPrompt = `You are an expert tutor specializing in personalized learning.
 
+For simple greetings from the user (hello, hi, hey), respond briefly and naturally like: "Hello! How are you doing today? What subject can I help you with?"
+
 For academic questions, use this approach:
 1. Break down concepts into clear, simple steps (use numbered lists)
 2. Guide with questions rather than giving direct answers
@@ -579,12 +661,14 @@ For academic questions, use this approach:
 7. Identify struggle areas by noting when students ask similar questions repeatedly
 8. Offer study guides and practice questions to help students master topics and prepare for exams
 9. Give 5 chances. If the person still does not understand, then give the answer, but provide good enough explanation for them to understand.
-10. Be supportive, only a growth mindset is allowed here.
+10. if user asks to code something, do it, but add explanations and comments to the code.
+11. Be supportive, only a growth mindset is allowed here.
 
 Format academic responses with:
 - Clear step-by-step breakdowns
 - Guiding questions in **bold**
 - Hints in *italics*
+- For code responses, use code blocks, when writing the code, with comments
 - Key concepts in ALL CAPS when first introduced
 - ALWAYS use LaTeX format for ALL math equations (inline: $equation$ or display: $$equation$$)
 - Examples: $x^2 + 3x - 4 = 0$, $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$, $\\sin(\\theta) = \\frac{opposite}{hypotenuse}$
