@@ -879,3 +879,68 @@ form#chat-form button:hover {
   color: #e0e0e0;
   font-size: 11px;
 }
+
+/* Copy button styles */
+.chat-message.bot {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid #555;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chat-message.bot:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background: rgba(0, 120, 212, 0.8);
+  border-color: #0078d4;
+  transform: scale(1.05);
+}
+
+.copy-button.copied {
+  background: rgba(40, 167, 69, 0.8);
+  border-color: #28a745;
+}
+
+.copy-button.copied:hover {
+  background: rgba(40, 167, 69, 0.9);
+}
+
+/* Mobile copy button adjustments */
+@media (max-width: 768px) {
+  .copy-button {
+    opacity: 1; /* Always visible on mobile */
+    top: 6px;
+    right: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .copy-button {
+    top: 4px;
+    right: 4px;
+    padding: 3px 5px;
+    font-size: 10px;
+  }
+}
