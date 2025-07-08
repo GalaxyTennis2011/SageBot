@@ -20,10 +20,11 @@ const authForms = document.querySelectorAll(".auth-form");
 
 // Chat DOM elements (initialized after login)
 let chatWindow = null;
-let chatForm = null; 
+let chatForm = null;
 let userInput = null;
 let fileInput = null;
 let newChatButton = null;
+let addSetButton = null;
 let chatHistoryList = null;
 let sidebar = null;
 let sidebarToggle = null;
@@ -33,6 +34,7 @@ let mainArea = null;
 let user = null;
 let chats = {};
 let currentChatId = null;
+let chatSets = JSON.parse(localStorage.getItem("chatSets") || "{}");
 let struggledTopics = JSON.parse(localStorage.getItem("struggledTopics") || "{}");
 let studyPlanOffered = JSON.parse(localStorage.getItem("studyPlanOffered") || "false");
 
@@ -41,7 +43,7 @@ btnSignUp.onclick = async () => {
   const email = document.getElementById("signup-email").value.trim();
   const password = document.getElementById("signup-password").value;
   if (!email || !password) return alert("Enter email and password");
-  
+
   // Show loading state
   const button = btnSignUp;
   const span = button.querySelector('span');
@@ -49,14 +51,14 @@ btnSignUp.onclick = async () => {
   button.disabled = true;
   span.style.display = 'none';
   loader.style.display = 'block';
-  
+
   const { error } = await supabase.auth.signUp({ email, password });
-  
+
   // Reset button state
   button.disabled = false;
   span.style.display = 'block';
   loader.style.display = 'none';
-  
+
   if (error) alert("Sign up error: " + error.message);
   else alert("Sign-up successful! Please confirm your email.");
 };
@@ -65,7 +67,7 @@ btnSignIn.onclick = async () => {
   const email = document.getElementById("signin-email").value.trim();
   const password = document.getElementById("signin-password").value;
   if (!email || !password) return alert("Enter email and password");
-  
+
   // Show loading state
   const button = btnSignIn;
   const span = button.querySelector('span');
@@ -73,14 +75,14 @@ btnSignIn.onclick = async () => {
   button.disabled = true;
   span.style.display = 'none';
   loader.style.display = 'block';
-  
+
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  
+
   // Reset button state
   button.disabled = false;
   span.style.display = 'block';
   loader.style.display = 'none';
-  
+
   if (error) return alert("Sign in error: " + error.message);
   user = data.user;
   await onLogin(user);
@@ -91,15 +93,118 @@ btnSignOut.onclick = async () => {
   location.reload();
 };
 
+// --- Settings Modal ---
+document.addEventListener('DOMContentLoaded', function() {
+  const settingsButton = document.getElementById('settings-button');
+  const settingsModal = document.getElementById('settings-modal');
+  const closeButton = document.querySelector('.close-button');
+  const saveSettingsButton = document.getElementById('save-settings');
+  const responseLength = document.getElementById('response-length');
+  const responseLengthValue = document.getElementById('response-length-value');
+  const creativity = document.getElementById('creativity');
+  const creativityValue = document.getElementById('creativity-value');
+  const style = document.getElementById('style');
+  const fontSize = document.getElementById('font-size');
+  const fontSizeValue = document.getElementById('font-size-value');
+
+  // Event listeners
+  if (settingsButton) settingsButton.addEventListener('click', openSettingsModal);
+  if (closeButton) closeButton.addEventListener('click', closeSettingsModal);
+  window.addEventListener('click', outsideClick);
+  if (saveSettingsButton) saveSettingsButton.addEventListener('click', saveSettings);
+
+  // Real-time value updates
+  if (responseLength && responseLengthValue) {
+    responseLength.addEventListener('input', function() {
+      responseLengthValue.textContent = responseLength.value;
+    });
+  }
+
+  if (creativity && creativityValue) {
+    creativity.addEventListener('input', function() {
+      creativityValue.textContent = creativity.value;
+    });
+  }
+
+  if (fontSize && fontSizeValue) {
+    fontSize.addEventListener('input', function() {
+      fontSizeValue.textContent = fontSize.value + 'px';
+      // Apply font size immediately
+      document.documentElement.style.setProperty('--chat-font-size', fontSize.value + 'px');
+    });
+  }
+
+  // Functions
+  function openSettingsModal() {
+    if (settingsModal) {
+      settingsModal.style.display = 'block';
+    }
+  }
+
+  function closeSettingsModal() {
+    if (settingsModal) {
+      settingsModal.style.display = 'none';
+    }
+  }
+
+  function outsideClick(e) {
+    if (e.target === settingsModal) {
+      closeSettingsModal();
+    }
+  }
+
+  // Simple save settings function (now handled by SettingsManager in index.html)
+  function saveSettings() {
+    // This is now handled by the SettingsManager class
+    closeSettingsModal();
+  }
+
+  // Notification function (simple implementation)
+  window.showNotification = function(message) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #0078d4;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.remove();
+      style.remove();
+    }, 3000);
+  };
+
+  // Settings are now handled by SettingsManager in index.html
+});
+
 // --- Auth Tab Switching ---
 authTabs.forEach(tab => {
   tab.addEventListener('click', () => {
     const targetTab = tab.dataset.tab;
-    
+
     // Update active tab
     authTabs.forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
-    
+
     // Update active form
     authForms.forEach(form => form.classList.remove('active'));
     document.getElementById(`${targetTab}-form`).classList.add('active');
@@ -129,6 +234,7 @@ async function onLogin(loggedInUser) {
     userInput = document.getElementById("user-input");
     fileInput = document.getElementById("file-input");
     newChatButton = document.getElementById("new-chat");
+    addSetButton = document.getElementById("add-set");
     chatHistoryList = document.getElementById("chat-history");
     sidebar = document.querySelector(".sidebar");
     sidebarToggle = document.querySelector(".sidebar-toggle");
@@ -272,6 +378,11 @@ function setupUIEvents() {
     startNewChat();
   });
 
+  // Add set button
+  addSetButton.addEventListener("click", () => {
+    createNewSet();
+  });
+
   // Chat form submit
   chatForm.addEventListener("submit", async e => {
     e.preventDefault();
@@ -329,19 +440,53 @@ function setupUIEvents() {
     lastBotMessageEl.innerHTML = "";
     typeMessage(aiReply, lastBotMessageEl);
 
-    // Render LaTeX after typing animation completes
-    setTimeout(() => {
-      if (window.MathJax) {
-        MathJax.typesetPromise([lastBotMessageEl]).catch(err => console.error("MathJax error:", err));
-      }
-    }, aiReply.length * 20 + 100);
-
     userInput.disabled = false;
     userInput.focus();
   });
 }
 
 // --- Chat functions ---
+
+// Create a new set/folder for organizing chats
+function createNewSet() {
+  const setName = prompt("Name this set/folder:");
+  if (!setName || setName.trim() === "") return;
+
+  const setId = Date.now().toString();
+  chatSets[setId] = {
+    name: setName.trim(),
+    chatIds: [],
+    created: new Date().toISOString()
+  };
+
+  saveLocal();
+  updateChatHistory();
+}
+
+// Assign chat to a set
+function assignChatToSet(chatId) {
+  const setOptions = Object.keys(chatSets).map(setId => `${setId}: ${chatSets[setId].name}`).join('\n');
+  if (setOptions === "") {
+    alert("No sets available. Create a set first using the 'Add Set' button.");
+    return;
+  }
+
+  const selectedSet = prompt(`Select a set for this chat:\n${setOptions}\n\nEnter the set ID:`);
+  if (!selectedSet || !chatSets[selectedSet]) return;
+
+  // Remove chat from any existing set
+  Object.keys(chatSets).forEach(setId => {
+    const index = chatSets[setId].chatIds.indexOf(chatId);
+    if (index > -1) {
+      chatSets[setId].chatIds.splice(index, 1);
+    }
+  });
+
+  // Add to new set
+  chatSets[selectedSet].chatIds.push(chatId);
+  saveLocal();
+  updateChatHistory();
+}
 
 // Create a new chat with initial "Chat started" message saved to DB
 async function startNewChat() {
@@ -364,6 +509,7 @@ async function startNewChat() {
 function saveLocal() {
   localStorage.setItem("chats", JSON.stringify(chats));
   localStorage.setItem("currentChatId", currentChatId);
+  localStorage.setItem("chatSets", JSON.stringify(chatSets));
   localStorage.setItem("struggledTopics", JSON.stringify(struggledTopics));
   localStorage.setItem("studyPlanOffered", JSON.stringify(studyPlanOffered));
 }
@@ -372,46 +518,294 @@ function saveLocal() {
 function updateChatHistory() {
   chatHistoryList.innerHTML = "";
   updateStruggleDisplay();
-  Object.keys(chats).forEach(id => {
-    const container = document.createElement("div");
-    container.style.display = "flex";
-    container.style.justifyContent = "space-between";
-    container.style.alignItems = "center";
-    container.style.padding = "6px";
-    container.style.cursor = "pointer";
-    container.style.backgroundColor = id === currentChatId ? "#505050" : "transparent";
 
-    const chatItem = document.createElement("div");
-    chatItem.textContent = chats[id].name;
-    chatItem.style.flexGrow = "1";
-    chatItem.addEventListener("click", () => {
-      currentChatId = id;
-      saveLocal();
-      renderChat();
-      updateChatHistory();
-    });
+  // Get chats that are not in any set
+  const chatsInSets = new Set();
+  Object.values(chatSets).forEach(set => {
+    set.chatIds.forEach(chatId => chatsInSets.add(chatId));
+  });
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "🗑️";
-    deleteBtn.style.marginLeft = "8px";
-    deleteBtn.addEventListener("click", async e => {
+  // Display sets first
+  Object.keys(chatSets).forEach(setId => {
+    const setContainer = document.createElement("div");
+    setContainer.style.marginBottom = "8px";
+
+    // Set header
+    const setHeader = document.createElement("div");
+    setHeader.style.display = "flex";
+    setHeader.style.justifyContent = "space-between";
+    setHeader.style.alignItems = "center";
+    setHeader.style.padding = "8px";
+    setHeader.style.backgroundColor = "#4a4a4a";
+    setHeader.style.borderRadius = "6px";
+    setHeader.style.marginBottom = "4px";
+    setHeader.style.fontWeight = "bold";
+    setHeader.style.color = "#0078d4";
+
+    const setTitle = document.createElement("span");
+    setTitle.textContent = `📁 ${chatSets[setId].name}`;
+    setTitle.style.fontSize = "14px";
+
+    const setDeleteBtn = document.createElement("button");
+    setDeleteBtn.textContent = "🗑️";
+    setDeleteBtn.style.background = "none";
+    setDeleteBtn.style.border = "none";
+    setDeleteBtn.style.color = "#bbb";
+    setDeleteBtn.style.cursor = "pointer";
+    setDeleteBtn.style.padding = "2px";
+    setDeleteBtn.addEventListener("click", e => {
       e.stopPropagation();
-      if (confirm("Delete this chat?")) {
-        delete chats[id];
-        await deleteChatFromDB(id);
-        if (currentChatId === id) {
-          currentChatId = Object.keys(chats)[0] || null;
-        }
+      if (confirm(`Delete set "${chatSets[setId].name}"? Chats will not be deleted.`)) {
+        delete chatSets[setId];
         saveLocal();
         updateChatHistory();
-        renderChat();
       }
     });
 
-    container.appendChild(chatItem);
-    container.appendChild(deleteBtn);
-    chatHistoryList.appendChild(container);
+    setHeader.appendChild(setTitle);
+    setHeader.appendChild(setDeleteBtn);
+    setContainer.appendChild(setHeader);
+
+    // Chats in this set
+    chatSets[setId].chatIds.forEach(chatId => {
+      if (chats[chatId]) {
+        const chatContainer = createChatItem(chatId, true);
+        setContainer.appendChild(chatContainer);
+      }
+    });
+
+    chatHistoryList.appendChild(setContainer);
   });
+
+  // Display ungrouped chats
+  const ungroupedChats = Object.keys(chats).filter(id => !chatsInSets.has(id));
+  if (ungroupedChats.length > 0) {
+    const ungroupedHeader = document.createElement("div");
+    ungroupedHeader.style.padding = "8px 4px";
+    ungroupedHeader.style.fontWeight = "bold";
+    ungroupedHeader.style.color = "#888";
+    ungroupedHeader.style.fontSize = "12px";
+    ungroupedHeader.textContent = "UNGROUPED CHATS";
+    chatHistoryList.appendChild(ungroupedHeader);
+
+    ungroupedChats.forEach(id => {
+      const chatContainer = createChatItem(id, false);
+      chatHistoryList.appendChild(chatContainer);
+    });
+  }
+}
+
+// Helper function to create chat item
+function createChatItem(id, isInSet) {
+  const container = document.createElement("div");
+  container.style.display = "flex";
+  container.style.justifyContent = "space-between";
+  container.style.alignItems = "center";
+  container.style.padding = "6px";
+  container.style.cursor = "pointer";
+  container.style.backgroundColor = id === currentChatId ? "#505050" : "transparent";
+  container.style.marginLeft = isInSet ? "16px" : "0";
+  container.style.borderRadius = "4px";
+  container.style.marginBottom = "2px";
+
+  const chatItem = document.createElement("div");
+  chatItem.textContent = chats[id].name;
+  chatItem.style.flexGrow = "1";
+  chatItem.style.fontSize = isInSet ? "13px" : "14px";
+  chatItem.addEventListener("click", () => {
+    currentChatId = id;
+    saveLocal();
+    renderChat();
+    updateChatHistory();
+  });
+
+  const buttonContainer = document.createElement("div");
+  buttonContainer.style.display = "flex";
+  buttonContainer.style.gap = "4px";
+
+  // Add to set button (only for ungrouped chats)
+  if (!isInSet) {
+    const addToSetBtn = document.createElement("button");
+    addToSetBtn.textContent = "📁";
+    addToSetBtn.title = "Add to set";
+    addToSetBtn.style.background = "none";
+    addToSetBtn.style.border = "none";
+    addToSetBtn.style.color = "#bbb";
+    addToSetBtn.style.cursor = "pointer";
+    addToSetBtn.style.padding = "2px";
+    addToSetBtn.style.fontSize = "12px";
+    addToSetBtn.addEventListener("click", e => {
+      e.stopPropagation();
+      assignChatToSet(id);
+    });
+    buttonContainer.appendChild(addToSetBtn);
+  }
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.textContent = "🗑️";
+  deleteBtn.style.background = "none";
+  deleteBtn.style.border = "none";
+  deleteBtn.style.color = "#bbb";
+  deleteBtn.style.cursor = "pointer";
+  deleteBtn.style.padding = "2px";
+  deleteBtn.style.fontSize = "12px";
+  deleteBtn.addEventListener("click", async e => {
+    e.stopPropagation();
+    if (confirm("Delete this chat?")) {
+      // Remove from sets
+      Object.keys(chatSets).forEach(setId => {
+        const index = chatSets[setId].chatIds.indexOf(id);
+        if (index > -1) {
+          chatSets[setId].chatIds.splice(index, 1);
+        }
+      });
+
+      delete chats[id];
+      await deleteChatFromDB(id);
+      if (currentChatId === id) {
+        currentChatId = Object.keys(chats)[0] || null;
+      }
+      saveLocal();
+      updateChatHistory();
+      renderChat();
+    }
+  });
+
+  buttonContainer.appendChild(deleteBtn);
+  container.appendChild(chatItem);
+  container.appendChild(buttonContainer);
+
+  return container;
+}
+
+// Function to edit user messages like ChatGPT
+function addEditButton(messageElement, messageText, messageIndex) {
+  const editButton = document.createElement('button');
+  editButton.className = 'edit-button';
+  editButton.innerHTML = '✏️ Edit';
+  editButton.title = 'Edit message';
+
+  editButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Store the original content
+    const originalContent = messageElement.innerHTML;
+
+    // Create edit interface
+    const editInterface = document.createElement('div');
+    editInterface.className = 'edit-interface';
+
+    const editTextarea = document.createElement('textarea');
+    editTextarea.className = 'edit-textarea';
+    editTextarea.value = messageText;
+    editTextarea.placeholder = 'Edit your message...';
+
+    const editButtons = document.createElement('div');
+    editButtons.className = 'edit-buttons';
+
+    const saveButton = document.createElement('button');
+    saveButton.className = 'save-button-edit';
+    saveButton.innerHTML = '💾 Save & Submit';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'cancel-button';
+    cancelButton.innerHTML = '❌ Cancel';
+
+    editButtons.appendChild(saveButton);
+    editButtons.appendChild(cancelButton);
+    editInterface.appendChild(editTextarea);
+    editInterface.appendChild(editButtons);
+
+    // Replace message content with edit interface
+    messageElement.innerHTML = '';
+    messageElement.appendChild(editInterface);
+
+    // Focus on textarea
+    editTextarea.focus();
+    editTextarea.select();
+
+    // Save button event - ChatGPT style
+    saveButton.addEventListener('click', async () => {
+      const newText = editTextarea.value.trim();
+      if (newText && newText !== messageText) {
+        // Remove all messages after this edited message (like ChatGPT)
+        chats[currentChatId].messages = chats[currentChatId].messages.slice(0, messageIndex + 1);
+        
+        // Update the edited message
+        chats[currentChatId].messages[messageIndex].text = newText;
+        
+        // Save to database and local storage
+        await saveMessageToDB(currentChatId, chats[currentChatId].name, "user", newText);
+        saveLocal();
+        
+        // Re-render chat with updated message
+        renderChat();
+        
+        // Generate new AI response to the edited message
+        userInput.disabled = true;
+        
+        // Add typing indicator
+        const typingMessage = { role: "bot", text: "Tutor is thinking", isTyping: true };
+        chats[currentChatId].messages.push(typingMessage);
+        renderChat();
+
+        // Get AI response
+        const aiReply = await sendMessageToAI(newText);
+
+        // Remove typing indicator
+        chats[currentChatId].messages.pop();
+
+        // Add AI message
+        const botMessage = { role: "bot", text: aiReply };
+        chats[currentChatId].messages.push(botMessage);
+        await saveMessageToDB(currentChatId, chats[currentChatId].name, "bot", aiReply);
+        saveLocal();
+
+        renderChat();
+
+        // Animate typing of AI reply
+        const lastBotMessageEl = chatWindow.querySelector(".chat-message.bot:last-child");
+        if (lastBotMessageEl) {
+          const savedContent = lastBotMessageEl.innerHTML;
+          lastBotMessageEl.innerHTML = "";
+          typeMessage(aiReply, lastBotMessageEl);
+        }
+
+        userInput.disabled = false;
+        userInput.focus();
+      } else if (newText === messageText) {
+        // No changes, just cancel
+        messageElement.innerHTML = originalContent;
+      } else {
+        // Empty input, show warning
+        editTextarea.style.borderColor = '#ef4444';
+        editTextarea.placeholder = 'Message cannot be empty!';
+        setTimeout(() => {
+          editTextarea.style.borderColor = '';
+          editTextarea.placeholder = 'Edit your message...';
+        }, 2000);
+      }
+    });
+
+    // Cancel button event
+    cancelButton.addEventListener('click', () => {
+      messageElement.innerHTML = originalContent;
+    });
+
+    // Escape key to cancel
+    editTextarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        messageElement.innerHTML = originalContent;
+      }
+    });
+  });
+
+  messageElement.appendChild(editButton);
+}
+
+// Function to add edit button to user messages
+function addUserMessageButtons(messageElement, messageText, messageIndex) {
+  addEditButton(messageElement, messageText, messageIndex);
 }
 
 // Function to copy text to clipboard
@@ -485,14 +879,20 @@ function addCopyButton(messageElement, messageText) {
 
 // Render messages in chat window
 function renderChat() {
+  if (!chatWindow) {
+    console.warn("Chat window not initialized yet");
+    return;
+  }
+  
   chatWindow.innerHTML = "";
   const messages = chats[currentChatId]?.messages || [];
+
   if (!currentChatId || messages.length === 0) {
     chatWindow.innerHTML = '<p class="chat-placeholder">Ask something to start chatting...</p>';
     return;
   }
 
-  messages.forEach(msg => {
+  messages.forEach((msg, index) => {
     const msgEl = document.createElement("div");
     msgEl.className = `chat-message ${msg.role}`;
 
@@ -501,25 +901,64 @@ function renderChat() {
     } else if (msg.role === "bot") {
       const formattedText = formatBotMessage(msg.text);
       msgEl.innerHTML = formattedText;
-
       // Add copy button to bot messages
       addCopyButton(msgEl, formattedText);
     } else {
+      // User message
       msgEl.textContent = msg.text;
+      // Add edit button to user messages
+      addUserMessageButtons(msgEl, msg.text, index);
     }
 
     chatWindow.appendChild(msgEl);
   });
 
-  // Render LaTeX equations
+  // Render LaTeX equations after all messages are added
   if (window.MathJax) {
     MathJax.typesetPromise([chatWindow]).catch(err => console.error("MathJax error:", err));
   }
 
+  // Auto-scroll to bottom
   setTimeout(() => {
     chatWindow.scrollTop = chatWindow.scrollHeight;
   }, 100);
 }
+
+// Function to generate AI response (mock implementation)
+function generateAIResponse(userMessage) {
+  // Add typing indicator
+  const typingMessage = { role: 'bot', text: '', isTyping: true };
+  chats[currentChatId].messages.push(typingMessage);
+  renderChat();
+
+  // Simulate AI thinking time
+  setTimeout(() => {
+    // Remove typing indicator
+    chats[currentChatId].messages.pop();
+
+    // Generate contextual response based on the edited message
+    let aiResponse = generateContextualResponse(userMessage);
+
+    // Add actual AI response
+    chats[currentChatId].messages.push({
+      role: 'bot',
+      text: aiResponse
+    });
+
+    renderChat();
+    saveLocal();
+  }, 1500); // Simulate thinking time
+}
+
+// Function to generate contextual responses based on user input
+function generateContextualResponse(userMessage) {
+  return sendMessageToAI(userMessage);
+}
+
+// Function to send message (removed - now handled in setupUIEvents)
+
+// Initial render will be called after login in onLogin() function
+
 
 // Format AI messages with Markdown-like replacements
 function formatBotMessage(text) {
@@ -552,6 +991,11 @@ function typeMessage(text, element, speed = 20) {
       // Add copy button when typing is complete
       if (i === text.length - 1) {
         addCopyButton(element, formattedText);
+        
+        // Render LaTeX after typing is complete
+        if (window.MathJax) {
+          MathJax.typesetPromise([element]).catch(err => console.error("MathJax error:", err));
+        }
       }
 
       i++;
@@ -648,8 +1092,6 @@ Would you like me to generate some practice questions to get started?`,
 
 async function sendMessageToAI(userMessage) {
   const tutorPrompt = `You are an expert tutor specializing in personalized learning.
-
-For simple greetings from the user (hello, hi, hey), respond briefly and naturally like: "Hello! How are you doing today? What subject can I help you with?"
 
 For academic questions, use this approach:
 1. Break down concepts into clear, simple steps (use numbered lists)
