@@ -4,17 +4,453 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Tutorly AI</title>
+  <title>SageBot</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- MathJax Configuration -->
   <script>
     window.MathJax = {
-      tex: {inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']]}
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        ignoreHtmlClass: 'tex2jax_ignore',
+        processHtmlClass: 'tex2jax_process'
+      },
+      startup: {
+        ready: () => {
+          console.log('MathJax is ready!');
+          MathJax.startup.defaultReady();
+        }
+      }
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
+
+<style>
+  /* Modern CSS Variables for Easy Theme Management */
+  :root {
+    --primary-color: #0078d4;
+    --primary-hover: #106ebe;
+    --success-color: #107c10;
+    --danger-color: #d13438;
+    --warning-color: #ff8c00;
+
+    /* Dark Theme (Default) */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #333333;
+    --bg-overlay: rgba(0, 0, 0, 0.8);
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #999999;
+    --border-color: #404040;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Light Theme Variables */
+  body.light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --bg-overlay: rgba(0, 0, 0, 0.5);
+    --text-primary: #1a1a1a;
+    --text-secondary: #333333;
+    --text-muted: #666666;
+    --border-color: #d0d0d0;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+  }
+
+  /* Settings Button */
+  .settings-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+    z-index: 1000;
+  }
+
+  .settings-btn:hover {
+    background: var(--primary-hover);
+    transform: rotate(45deg) scale(1.1);
+  }
+
+  /* Settings Modal Overlay */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-overlay);
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .settings-overlay.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Settings Modal Content */
+  .settings-modal-content {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideIn 0.3s ease;
+    border: 1px solid var(--border-color);
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-50px) scale(0.9);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  /* Settings Header */
+  .settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    border-radius: 16px 16px 0 0;
+  }
+
+  .settings-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+
+  .close-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-primary);
+  }
+
+  /* Settings Body */
+  .settings-body {
+    padding: 24px;
+  }
+
+  .setting-item {
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+  }
+
+  .setting-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 120, 212, 0.1);
+  }
+
+  .setting-item label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  /* Theme Toggle Switch */
+  .theme-toggle-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .theme-info {
+    flex: 1;
+  }
+
+  .theme-description {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    background: var(--border-color);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .toggle-switch.active {
+    background: var(--primary-color);
+  }
+
+  .toggle-slider {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .toggle-switch.active .toggle-slider {
+    transform: translateX(30px);
+  }
+
+  /* Range Sliders */
+  .range-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .range-slider {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border-color);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .range-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .range-slider::-webkit-slider-thumb:hover {
+    background: var(--primary-hover);
+    transform: scale(1.1);
+  }
+
+  .range-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  .range-value {
+    min-width: 40px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--bg-secondary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  /* Select Dropdown */
+  .custom-select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+
+  .custom-select:hover,
+  .custom-select:focus {
+    border-color: var(--primary-color);
+    outline: none;
+  }
+
+  /* Settings Footer */
+  .settings-footer {
+    padding: 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    background: var(--bg-tertiary);
+    border-radius: 0 0 16px 16px;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-primary {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+  }
+
+  .btn-secondary:hover {
+    background: var(--border-color);
+  }
+
+  /* Success Message */
+  .success-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--success-color);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    z-index: 3000;
+  }
+
+  .success-message.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Demo Content */
+  .demo-content {
+    padding: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .demo-content h1 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+  }
+
+  .demo-content p {
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+  }
+
+  /* Responsive Design */
+  @media (max-width: 600px) {
+    .settings-modal-content {
+      width: 95%;
+      margin: 20px;
+    }
+
+    .settings-header,
+    .settings-body,
+    .settings-footer {
+      padding: 16px;
+    }
+
+    .settings-footer {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
 
 <body>
 
@@ -22,7 +458,7 @@
   <div id="auth-section" class="auth-overlay">
     <div class="auth-modal">
       <div class="auth-header">
-        <h2>Welcome to Tutorly AI</h2>
+        <h2>Welcome to SageBot</h2>
         <p>Your AI-powered learning companion</p>
       </div>
 
@@ -50,11 +486,11 @@
         <div class="auth-form" id="signup-form">
           <div class="input-group">
             <input type="email" id="signup-email" placeholder="Enter your email" required>
-            <label for="signup-email">Email</label>
+            <!-- <label for="signup-email">Email</label> -->
           </div>
           <div class="input-group">
             <input type="password" id="signup-password" placeholder="Create a password" required>
-            <label for="signup-password">Password</label>
+            <!-- <label for="signup-password">Password</label> -->
           </div>
           <button class="auth-button primary" id="sign-up">
             <span>Create Account</span>
@@ -72,11 +508,93 @@
   <!-- Sign Out Button (appears after login) -->
   <button id="sign-out" class="sign-out-btn" style="display:none;">Sign Out</button>
 
+  <div style="display:flex; justify-content: flex-end; align-items:center;">
+    <!-- Sign Out Button (appears after login) -->
+    <button id="sign-out" class="sign-out-btn" style="display:none;">Sign Out</button>
+
+    <!-- Settings Button (appears after login) -->
+    <button id="settings-button" class="settings-btn" style="margin-left: 10px;">⚙️</button>
+  </div>
+
+  <!-- Success Message -->
+  <div id="success-message" class="success-message">Settings saved successfully!</div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="settings-overlay">
+    <div class="settings-modal-content">
+      <div class="settings-header">
+        <h2>Settings</h2>
+        <span class="close-button" id="close-settings">&times;</span>
+      </div>
+
+      <div class="settings-body">
+        <div class="setting-item">
+          <div class="theme-toggle-container">
+            <div class="theme-info">
+              <label for="theme-toggle">Theme</label>
+              <div class="theme-description">Switch between dark and light modes</div>
+            </div>
+            <div class="toggle-switch" id="theme-toggle">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label for="response-length">Response Length:</label>
+          <input type="range" id="response-length" min="50" max="500" value="200">
+          <span id="response-length-value">200</span>
+        </div>
+
+        <div class="setting-item">
+          <label for="creativity">Creativity:</label>
+          <input type="range" id="creativity" min="0" max="1" step="0.1" value="0.5">
+          <span id="creativity-value">0.5</span>
+        </div>
+
+        <div class="setting-item">
+          <label for="style">Style:</label>
+          <select id="style">
+            <option value="concise">Concise</option>
+            <option value="detailed">Detailed</option>
+            <option value="friendly" selected>Friendly</option>
+            <option value="professional">Professional</option>
+          </select>
+        </div>
+
+        <div class="setting-item">
+          <label for="font-size">Font Size:</label>
+          <input type="range" id="font-size" min="12" max="20" value="16">
+          <span id="font-size-value">16px</span>
+        </div>
+
+        <div class="setting-item">
+          <div class="theme-toggle-container">
+            <div class="theme-info">
+              <label for="notifications">Notifications</label>
+              <div class="theme-description">Enable browser notifications</div>
+            </div>
+            <div class="toggle-switch" id="notifications-toggle">
+              <div class="toggle-slider"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="settings-footer">
+        <button id="save-settings" class="auth-button primary">Save Settings</button>
+        <button id="reset-settings" class="auth-button secondary">Reset to Default</button>
+      </div>
+    </div>
+  </div>
+
   <!-- CHAT UI -->
   <div id="chat-ui" style="display:none;">
     <div class="sidebar-overlay"></div>
     <div class="sidebar">
       <button id="new-chat">New Chat</button>
+      <button id="add-set">Add Set</button>
       <div id="chat-history"></div>
       <div id="struggle-tracker" style="margin-top:20px;padding:10px;background:#333;border-radius:8px;font-size:12px;">
         <h4 style="color:#0078d4;margin:0 0 8px;">📊 Learning Progress</h4>
@@ -96,6 +614,303 @@
       </form>
     </div>
   </div>
+
+  <script>
+    // Settings Management System
+    class SettingsManager {
+      constructor() {
+        this.defaultSettings = {
+          theme: 'dark',
+          responseLength: 200,
+          creativity: 0.5,
+          style: 'friendly',
+          fontSize: 16,
+          notifications: false
+        };
+
+        this.settings = {...this.defaultSettings};
+        this.init();
+      }
+
+      init() {
+        this.loadSettings();
+        this.bindEvents();
+        this.applySettings();
+        this.updateUI();
+      }
+
+      // Load settings from localStorage
+      loadSettings() {
+        const saved = localStorage.getItem('askraider-settings');
+        if (saved) {
+          try {
+            this.settings = {...this.defaultSettings, ...JSON.parse(saved)};
+          } catch (e) {
+            console.warn('Failed to load settings, using defaults');
+            this.settings = {...this.defaultSettings};
+          }
+        }
+      }
+
+      // Save settings to localStorage
+      saveSettings() {
+        try {
+          localStorage.setItem('askraider-settings', JSON.stringify(this.settings));
+          this.showSuccess();
+        } catch (e) {
+          console.error('Failed to save settings:', e);
+          alert('Failed to save settings. Please try again.');
+        }
+      }
+
+      // Bind all event listeners
+      bindEvents() {
+        try {
+          // Modal controls
+          const settingsButton = document.getElementById('settings-button');
+          const closeSettings = document.getElementById('close-settings');
+          const settingsModal = document.getElementById('settings-modal');
+          const saveSettings = document.getElementById('save-settings');
+          const resetSettings = document.getElementById('reset-settings');
+
+          if (settingsButton) {
+            settingsButton.addEventListener('click', () => this.openModal());
+          }
+
+          if (closeSettings) {
+            closeSettings.addEventListener('click', () => this.closeModal());
+          }
+
+          if (settingsModal) {
+            settingsModal.addEventListener('click', (e) => {
+              if (e.target.id === 'settings-modal') this.closeModal();
+            });
+          }
+
+          // Action buttons
+          if (saveSettings) {
+            saveSettings.addEventListener('click', () => this.saveSettings());
+          }
+
+          if (resetSettings) {
+            resetSettings.addEventListener('click', () => this.resetSettings());
+          }
+
+          // Theme toggle
+          const themeToggle = document.getElementById('theme-toggle');
+          if (themeToggle) {
+            themeToggle.addEventListener('click', () => this.toggleTheme());
+          }
+
+          // Range sliders
+          const responseLength = document.getElementById('response-length');
+          if (responseLength) {
+            responseLength.addEventListener('input', (e) => {
+              this.settings.responseLength = parseInt(e.target.value);
+              this.updateRangeValue('response-length-value', e.target.value);
+            });
+          }
+
+          const creativity = document.getElementById('creativity');
+          if (creativity) {
+            creativity.addEventListener('input', (e) => {
+              this.settings.creativity = parseFloat(e.target.value);
+              this.updateRangeValue('creativity-value', e.target.value);
+            });
+          }
+
+          const fontSize = document.getElementById('font-size');
+          if (fontSize) {
+            fontSize.addEventListener('input', (e) => {
+              this.settings.fontSize = parseInt(e.target.value);
+              this.updateRangeValue('font-size-value', e.target.value + 'px');
+              this.applyFontSize();
+            });
+          }
+
+          // Style selector
+          const style = document.getElementById('style');
+          if (style) {
+            style.addEventListener('change', (e) => {
+              this.settings.style = e.target.value;
+            });
+          }
+
+          // Notifications toggle
+          const notificationsToggle = document.getElementById('notifications-toggle');
+          if (notificationsToggle) {
+            notificationsToggle.addEventListener('click', () => this.toggleNotifications());
+          }
+
+          // Keyboard shortcuts
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.closeModal();
+          });
+
+        } catch (error) {
+          console.error('Error binding events:', error);
+        }
+      }
+
+      // Open settings modal
+      openModal() {
+        document.getElementById('settings-modal').classList.add('show');
+        document.body.style.overflow = 'hidden';
+      }
+
+      // Close settings modal
+      closeModal() {
+        document.getElementById('settings-modal').classList.remove('show');
+        document.body.style.overflow = '';
+      }
+
+      // Toggle theme
+      toggleTheme() {
+        this.settings.theme = this.settings.theme === 'dark' ? 'light' : 'dark';
+        this.applyTheme();
+        this.updateThemeToggle();
+      }
+
+      // Toggle notifications
+      toggleNotifications() {
+        this.settings.notifications = !this.settings.notifications;
+        this.updateNotificationsToggle();
+
+        // Request permission if enabling notifications
+        if (this.settings.notifications && 'Notification' in window) {
+          Notification.requestPermission();
+        }
+      }
+
+      // Apply all settings to the UI
+      applySettings() {
+        this.applyTheme();
+        this.applyFontSize();
+      }
+
+      // Apply theme
+      applyTheme() {
+        document.body.className = this.settings.theme;
+      }
+
+      // Apply font size
+      applyFontSize() {
+        document.documentElement.style.setProperty('--base-font-size', this.settings.fontSize + 'px');
+        document.body.style.fontSize = this.settings.fontSize + 'px';
+      }
+
+      // Update UI elements to match current settings
+      updateUI() {
+        // Update theme toggle
+        this.updateThemeToggle();
+
+        // Update range sliders
+        document.getElementById('response-length').value = this.settings.responseLength;
+        this.updateRangeValue('response-length-value', this.settings.responseLength);
+
+        document.getElementById('creativity').value = this.settings.creativity;
+        this.updateRangeValue('creativity-value', this.settings.creativity);
+
+        document.getElementById('font-size').value = this.settings.fontSize;
+        this.updateRangeValue('font-size-value', this.settings.fontSize + 'px');
+
+        // Update style selector
+        document.getElementById('style').value = this.settings.style;
+
+        // Update notifications toggle
+        this.updateNotificationsToggle();
+      }
+
+      // Update theme toggle appearance
+      updateThemeToggle() {
+        const toggle = document.getElementById('theme-toggle');
+        if (toggle) {
+          if (this.settings.theme === 'light') {
+            toggle.classList.add('active');
+          } else {
+            toggle.classList.remove('active');
+          }
+        }
+      }
+
+      // Update notifications toggle appearance
+      updateNotificationsToggle() {
+        const toggle = document.getElementById('notifications-toggle');
+        if (toggle) {
+          if (this.settings.notifications) {
+            toggle.classList.add('active');
+          } else {
+            toggle.classList.remove('active');
+          }
+        }
+      }
+
+      // Update range value display
+      updateRangeValue(elementId, value) {
+        document.getElementById(elementId).textContent = value;
+      }
+
+      // Reset to default settings
+      resetSettings() {
+        if (confirm('Are you sure you want to reset all settings to default?')) {
+          this.settings = {...this.defaultSettings};
+          this.applySettings();
+          this.updateUI();
+          this.saveSettings();
+        }
+      }
+
+      // Show success message
+      showSuccess() {
+        const message = document.getElementById('success-message');
+        if (message) {
+          message.classList.add('show');
+          setTimeout(() => {
+            message.classList.remove('show');
+          }, 3000);
+        } else {
+          // Fallback alert if success message element doesn't exist
+          alert('Settings saved successfully!');
+        }
+      }
+
+      // Get current settings (for use by other parts of the app)
+      getSettings() {
+        return {...this.settings};
+      }
+
+      // Update a specific setting
+      updateSetting(key, value) {
+        if (this.settings.hasOwnProperty(key)) {
+          this.settings[key] = value;
+          this.applySettings();
+          this.updateUI();
+        }
+      }
+    }
+
+    // Initialize settings manager when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      window.settingsManager = new SettingsManager();
+
+      // Example of how other parts of your app can access settings
+      console.log('Current settings:', window.settingsManager.getSettings());
+    });
+
+    // Utility function to get current settings from anywhere in your app //
+    function getAppSettings() {
+      return window.settingsManager ? window.settingsManager.getSettings() : null;
+    }
+
+    // Example notification function
+    function showNotification(title, message) {
+      const settings = getAppSettings();
+      if (settings && settings.notifications && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {body: message, icon: '⚙️'});
+      }
+    }
+
+  </script>
 
   <script src="script.js"></script>
 </body>
