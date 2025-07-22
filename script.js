@@ -17,7 +17,7 @@ const SUPABASE_URL = "https://fcleabfytfraizesirfx.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZjbGVhYmZ5dGZyYWl6ZXNpcmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA0MzE4MTksImV4cCI6MjA2NjAwNzgxOX0.Hx_0LvIvYdvlgceHWKyamIw0cpkZTI8NjikaVZfxaYA";
 const OPENROUTER_API_KEY =
-  "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";
+  "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";
 const SITE_URL = "https://hunbot.com";
 const SITE_NAME = "CHATGPT CLONE";
 
@@ -874,12 +874,32 @@ async function loadUserLearningData() {
       studyStreak = {
         current: streakData.current_streak || 0,
         best: streakData.best_streak || 0,
-        lastStudyDate: streakData.last_study_date
+        lastStudyDate: streakData.last_study_date ? streakData.last_study_date : null
       };
       struggledTopics = streakData.struggled_topics || {};
       studyPlanOffered = streakData.study_plan_offered || false;
       
       console.log("Loaded study streak from database:", studyStreak);
+      
+      // Check if we need to reset streak due to missed days
+      if (studyStreak.lastStudyDate) {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const lastStudyDate = new Date(studyStreak.lastStudyDate);
+        const lastStudyStr = lastStudyDate.toISOString().split('T')[0];
+        
+        // Calculate days difference
+        const daysDiff = Math.floor((today - lastStudyDate) / (1000 * 60 * 60 * 24));
+        
+        console.log("Days since last study:", daysDiff);
+        
+        if (daysDiff > 1) {
+          // More than 1 day gap, reset current streak but keep best streak
+          console.log("Resetting streak due to gap of", daysDiff, "days");
+          studyStreak.current = 0;
+          // Don't update lastStudyDate here - let updateStudyStreak handle it
+        }
+      }
     } else {
       // Initialize with default values if no data exists
       studyStreak = { current: 0, best: 0, lastStudyDate: null };
@@ -1139,6 +1159,7 @@ function setupUIEvents() {
     trackStruggle(message);
 
     // Update gamification
+    console.log("Updating study streak for message...");
     await updateStudyStreak();
     checkAchievements();
 
@@ -1680,30 +1701,56 @@ function showAchievementUnlocked(achievementId) {
 }
 
 async function updateStudyStreak() {
-  const today = new Date().toDateString();
-  const lastStudyDate = studyStreak.lastStudyDate;
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-  if (lastStudyDate !== today) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+  console.log("Updating streak. Today:", todayStr, "Last study date:", studyStreak.lastStudyDate);
 
-    if (lastStudyDate === yesterday.toDateString()) {
-      // Continuing streak
-      studyStreak.current++;
-    } else if (lastStudyDate !== today) {
-      // Breaking streak or starting new
-      studyStreak.current = 1;
+  // Check if lastStudyDate is null or undefined
+  if (!studyStreak.lastStudyDate) {
+    // If there's no previous study date, start a new streak
+    studyStreak.current = 1;
+    studyStreak.lastStudyDate = todayStr;
+    studyStreak.best = Math.max(studyStreak.best || 0, studyStreak.current);
+    console.log("Starting new streak - first time");
+  } else {
+    // Convert lastStudyDate to YYYY-MM-DD format for consistent comparison
+    const lastStudyDate = new Date(studyStreak.lastStudyDate);
+    const lastStudyStr = lastStudyDate.toISOString().split('T')[0];
+    
+    console.log("Comparing dates - Last:", lastStudyStr, "Today:", todayStr);
+
+    if (lastStudyStr !== todayStr) {
+      // Calculate yesterday in YYYY-MM-DD format
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      
+      console.log("Different dates. Yesterday:", yesterdayStr);
+
+      if (lastStudyStr === yesterdayStr) {
+        // Continuing streak from yesterday
+        studyStreak.current = (studyStreak.current || 0) + 1;
+        console.log("Continuing streak, new count:", studyStreak.current);
+      } else {
+        // Breaking streak or gap in days - start new streak
+        studyStreak.current = 1;
+        console.log("Breaking streak, starting fresh");
+      }
+
+      studyStreak.lastStudyDate = todayStr;
+      studyStreak.best = Math.max(studyStreak.best || 0, studyStreak.current);
+    } else {
+      console.log("Already studied today, no streak update needed");
+      return; // Already studied today, no update needed
     }
-
-    studyStreak.lastStudyDate = today;
-    studyStreak.best = Math.max(studyStreak.best, studyStreak.current);
-    
-    // Save immediately to both localStorage and database
-    saveLocal();
-    await saveUserLearningData();
-    
-    console.log("Study streak updated:", studyStreak);
   }
+  
+  // Save immediately to both localStorage and database
+  saveLocal();
+  await saveUserLearningData();
+  
+  console.log("Study streak updated:", studyStreak);
 }
 
 // Update sidebar chat history UI
